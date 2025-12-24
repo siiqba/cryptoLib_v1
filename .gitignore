@@ -1,7 +1,7 @@
 #some internal use only files
 Debug\
 .git\
-.settings\
-.clangd
-.cproject
-.project
+#.settings\
+#.clangd
+#.cproject
+#.project
