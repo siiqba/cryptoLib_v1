@@ -5,7 +5,7 @@
  *      Author: sii
  */
 
-#include "../sha2.h"
+#include "sha2.h"
 #include <stdio.h>
 #include <memory.h>
 #include <stdbool.h>
@@ -206,7 +206,7 @@ int sw_sha2_update(sw_sha2_ctx* ctx, const uint8_t* msg, uint32_t msg_size)
     }
 
     uint32_t rem_size = SHA2_BLOCK_SIZE - ctx->block_size;
-    uint32_t copy_size = msg_size > rem_size ? rem_size : msg_size;
+    uint32_t copy_size = msg_size > rem_size ? rem_size : msg_size;//MINIMUM
 
     if (0u == msg_size || NULL == msg)
     {
@@ -345,14 +345,15 @@ int sw_sha256(const uint8_t* message, unsigned int len, uint8_t digest[SHA2_DIGE
 
 
 
-int swSha2Init(sw_sha2_ctx* ctx)
+int swSha2Init(swSha2Ctx_t* ctx)
 {
 	int i;
-	static const uint32_t hash_init[] = {
-		0x6a09e667U, 0xbb67ae85U, 0x3c6ef372U, 0xa54ff53aU,
-		0x510e527fU, 0x9b05688cU, 0x1f83d9abU, 0x5be0cd19U
-	};
+//	static const uint32_t hash_init[] = {
+//		0x6a09e667U, 0xbb67ae85U, 0x3c6ef372U, 0xa54ff53aU,
+//		0x510e527fU, 0x9b05688cU, 0x1f83d9abU, 0x5be0cd19U
+//	};
 
+	//ToDo: check that, this value can be NULL at this point
 	if(NULL == ctx)
 	{
 		return -1;
@@ -361,7 +362,7 @@ int swSha2Init(sw_sha2_ctx* ctx)
 	(void)memset(ctx, 0, sizeof(*ctx));
 	for (i = 0; i < 8; i++)
 	{
-		ctx->hash[i] = hash_init[i];
+		ctx->hash[i] = sha2_256_HashInit[i];
 	}
 
 	return 0;
@@ -376,7 +377,7 @@ int swSha2Init(sw_sha2_ctx* ctx)
  *
  * \return 0 on success, otherwise an error code.
  */
-static int swSha2BlockProcess(sw_sha2_ctx* ctx, const uint8_t* block)
+static int swSha2BlockProcess(swSha2Ctx_t* ctx, const uint8_t* block)
 {
     uint16_t i = 0u;
 	uint32_t w_index = 0U;
@@ -397,16 +398,6 @@ static int swSha2BlockProcess(sw_sha2_ctx* ctx, const uint8_t* block)
         uint8_t  w_byte[SHA2_BLOCK_SIZE * sizeof(uint32_t)];
     } w_union;
 
-    static const uint32_t k[] = {
-        0x428a2f98U, 0x71374491U, 0xb5c0fbcfU, 0xe9b5dba5U, 0x3956c25bU, 0x59f111f1U, 0x923f82a4U, 0xab1c5ed5U,
-        0xd807aa98U, 0x12835b01U, 0x243185beU, 0x550c7dc3U, 0x72be5d74U, 0x80deb1feU, 0x9bdc06a7U, 0xc19bf174U,
-        0xe49b69c1U, 0xefbe4786U, 0x0fc19dc6U, 0x240ca1ccU, 0x2de92c6fU, 0x4a7484aaU, 0x5cb0a9dcU, 0x76f988daU,
-        0x983e5152U, 0xa831c66dU, 0xb00327c8U, 0xbf597fc7U, 0xc6e00bf3U, 0xd5a79147U, 0x06ca6351U, 0x14292967U,
-        0x27b70a85U, 0x2e1b2138U, 0x4d2c6dfcU, 0x53380d13U, 0x650a7354U, 0x766a0abbU, 0x81c2c92eU, 0x92722c85U,
-        0xa2bfe8a1U, 0xa81a664bU, 0xc24b8b70U, 0xc76c51a3U, 0xd192e819U, 0xd6990624U, 0xf40e3585U, 0x106aa070U,
-        0x19a4c116U, 0x1e376c08U, 0x2748774cU, 0x34b0bcb5U, 0x391c0cb3U, 0x4ed8aa4aU, 0x5b9cca4fU, 0x682e6ff3U,
-        0x748f82eeU, 0x78a5636fU, 0x84c87814U, 0x8cc70208U, 0x90befffaU, 0xa4506cebU, 0xbef9a3f7U, 0xc67178f2U
-    };
 
     (void)memset(&w_union, 0, sizeof(w_union));
 
@@ -456,7 +447,7 @@ static int swSha2BlockProcess(sw_sha2_ctx* ctx, const uint8_t* block)
 			 ^ rotate_right(rotate_register[4], 25U);
 		ch = (rotate_register[4] & rotate_register[5])
 			 ^ (~rotate_register[4] & rotate_register[6]);
-		t1 = rotate_register[7] + s1 + ch + k[i] + w_union.w_word[i];
+		t1 = rotate_register[7] + s1 + ch + sha2_255_k[i] + w_union.w_word[i];
 
 		rotate_register[7] = rotate_register[6];
 		rotate_register[6] = rotate_register[5];
@@ -481,8 +472,31 @@ static int swSha2BlockProcess(sw_sha2_ctx* ctx, const uint8_t* block)
 
 int sha2(const uint8_t* message, unsigned int len, uint8_t digest[SHA2_DIGEST_SIZE])
 {
-	sw_sha2_ctx ctx;
+	swSha2Ctx_t ctx;
+	if((NULL == message) || (NULL == digest) || (0 >= len))
+	{
+		return -1;
+
+	}
 	swSha2Init(&ctx);
+	int i;
+	uint32_t copy_size, rem_size;
+//	int block_Count = len / SHA2_BLOCK_SIZE;
+	while(len){
+		rem_size = SHA2_BLOCK_SIZE - ctx.tblock_size;
+		copy_size = len > rem_size ? rem_size : len;//MINIMUM
+		(void)memcpy(&ctx.tblock[ctx.tblock_size], &message[ctx.msg_pos], copy_size);
+		ctx.tblock_size += copy_size;
+		ctx.msg_pos += copy_size;
+		len -= copy_size;
+		if (ctx.tblock_size < SHA2_BLOCK_SIZE) break;
+		if (0 != swSha2BlockProcess(&ctx, &ctx.tblock)){
+			return -1;
+		}
+
+	}
+
+
 	swSha2BlockProcess(&ctx, message);
 	uint32_t* outBuff = ctx.hash;
 	memcpy(digest, outBuff, 32);
