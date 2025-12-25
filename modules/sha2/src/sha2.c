@@ -5,7 +5,7 @@
  *      Author: sii
  */
 
-#include "sha2.h"
+#include "../sha2.h"
 #include <stdio.h>
 #include <memory.h>
 #include <stdbool.h>
@@ -32,9 +32,9 @@
 int sw_sha2_init(sw_sha2_ctx* ctx);
 int sw_sha2_update(sw_sha2_ctx* ctx, const uint8_t* msg, uint32_t msg_size);
 
-void sha2(void){
-	printf("sha2\n");
-}
+//void sha2(void){
+//	printf("sha2\n");
+//}
 
 /**
  * \brief Intialize the software SHA256.
@@ -343,3 +343,148 @@ int sw_sha256(const uint8_t* message, unsigned int len, uint8_t digest[SHA2_DIGE
     return status;
 }
 
+
+
+int swSha2Init(sw_sha2_ctx* ctx)
+{
+	int i;
+	static const uint32_t hash_init[] = {
+		0x6a09e667U, 0xbb67ae85U, 0x3c6ef372U, 0xa54ff53aU,
+		0x510e527fU, 0x9b05688cU, 0x1f83d9abU, 0x5be0cd19U
+	};
+
+	if(NULL == ctx)
+	{
+		return -1;
+	}
+
+	(void)memset(ctx, 0, sizeof(*ctx));
+	for (i = 0; i < 8; i++)
+	{
+		ctx->hash[i] = hash_init[i];
+	}
+
+	return 0;
+}
+
+
+/**
+ * \brief Processes whole blocks (64 bytes) of data.
+ *
+ * \param[in] ctx          SHA256 hash context
+ * \param[in] blocks       Raw blocks to be processed
+ *
+ * \return 0 on success, otherwise an error code.
+ */
+static int swSha2BlockProcess(sw_sha2_ctx* ctx, const uint8_t* block)
+{
+    uint16_t i = 0u;
+	uint32_t w_index = 0U;
+	uint32_t word_value = 0U;
+	uint32_t s0, s1 = 0U;
+	uint32_t t1, t2 = 0U;
+	uint32_t maj, ch = 0U;
+	uint32_t rotate_register[8] = {0};
+
+    if((NULL == ctx) || (NULL == block))
+    {
+        return -1;
+    }
+
+    union
+    {
+        uint32_t w_word[SHA2_BLOCK_SIZE];
+        uint8_t  w_byte[SHA2_BLOCK_SIZE * sizeof(uint32_t)];
+    } w_union;
+
+    static const uint32_t k[] = {
+        0x428a2f98U, 0x71374491U, 0xb5c0fbcfU, 0xe9b5dba5U, 0x3956c25bU, 0x59f111f1U, 0x923f82a4U, 0xab1c5ed5U,
+        0xd807aa98U, 0x12835b01U, 0x243185beU, 0x550c7dc3U, 0x72be5d74U, 0x80deb1feU, 0x9bdc06a7U, 0xc19bf174U,
+        0xe49b69c1U, 0xefbe4786U, 0x0fc19dc6U, 0x240ca1ccU, 0x2de92c6fU, 0x4a7484aaU, 0x5cb0a9dcU, 0x76f988daU,
+        0x983e5152U, 0xa831c66dU, 0xb00327c8U, 0xbf597fc7U, 0xc6e00bf3U, 0xd5a79147U, 0x06ca6351U, 0x14292967U,
+        0x27b70a85U, 0x2e1b2138U, 0x4d2c6dfcU, 0x53380d13U, 0x650a7354U, 0x766a0abbU, 0x81c2c92eU, 0x92722c85U,
+        0xa2bfe8a1U, 0xa81a664bU, 0xc24b8b70U, 0xc76c51a3U, 0xd192e819U, 0xd6990624U, 0xf40e3585U, 0x106aa070U,
+        0x19a4c116U, 0x1e376c08U, 0x2748774cU, 0x34b0bcb5U, 0x391c0cb3U, 0x4ed8aa4aU, 0x5b9cca4fU, 0x682e6ff3U,
+        0x748f82eeU, 0x78a5636fU, 0x84c87814U, 0x8cc70208U, 0x90befffaU, 0xa4506cebU, 0xbef9a3f7U, 0xc67178f2U
+    };
+
+    (void)memset(&w_union, 0, sizeof(w_union));
+
+	// Swap word bytes
+	for (i = 0U; i < SHA2_BLOCK_SIZE; i += 4U)
+	{
+		w_union.w_byte[i + 3U] = block[i + 0U];
+		w_union.w_byte[i + 2U] = block[i + 1U];
+		w_union.w_byte[i + 1U] = block[i + 2U];
+		w_union.w_byte[i + 0U] = block[i + 3U];
+		w_union.w_word[i / 4U] = UINT32_HOST_TO_LE(w_union.w_word[i / 4U]);
+	}
+
+	w_index = 16u;
+	while (w_index < SHA2_BLOCK_SIZE)
+	{
+		// right rotate for 32-bit variable in C: (value >> places) | (value << 32 - places)
+		word_value = w_union.w_word[w_index - 15U];
+		s0 = rotate_right(word_value, 7U) ^ rotate_right(word_value, 18U) ^ (word_value >> 3U);
+
+		word_value = w_union.w_word[w_index - 2U];
+		s1 = rotate_right(word_value, 17U) ^ rotate_right(word_value, 19U) ^ (word_value >> 10U);
+
+		w_union.w_word[w_index] = w_union.w_word[w_index - 16U] + s0 + w_union.w_word[w_index - 7U] + s1;
+
+		w_index++;
+	}
+
+	// Initialize hash value for this chunk.
+	for (i = 0U; i < 8U; i++)
+	{
+		rotate_register[i] = ctx->hash[i];
+	}
+
+	// hash calculation loop
+	for (i = 0U; i < SHA2_BLOCK_SIZE; i++)
+	{
+		s0 = rotate_right(rotate_register[0], 2U)
+			 ^ rotate_right(rotate_register[0], 13U)
+			 ^ rotate_right(rotate_register[0], 22U);
+		maj = (rotate_register[0] & rotate_register[1])
+			  ^ (rotate_register[0] & rotate_register[2])
+			  ^ (rotate_register[1] & rotate_register[2]);
+		t2 = s0 + maj;
+		s1 = rotate_right(rotate_register[4], 6U)
+			 ^ rotate_right(rotate_register[4], 11U)
+			 ^ rotate_right(rotate_register[4], 25U);
+		ch = (rotate_register[4] & rotate_register[5])
+			 ^ (~rotate_register[4] & rotate_register[6]);
+		t1 = rotate_register[7] + s1 + ch + k[i] + w_union.w_word[i];
+
+		rotate_register[7] = rotate_register[6];
+		rotate_register[6] = rotate_register[5];
+		rotate_register[5] = rotate_register[4];
+		rotate_register[4] = rotate_register[3] + t1;
+		rotate_register[3] = rotate_register[2];
+		rotate_register[2] = rotate_register[1];
+		rotate_register[1] = rotate_register[0];
+		rotate_register[0] = t1 + t2;
+	}
+
+	// Add the hash of this block to current result.
+	for (i = 0U; i < 8U; i++)
+	{
+		ctx->hash[i] += rotate_register[i];
+	}
+
+
+    return 0;
+}
+
+
+int sha2(const uint8_t* message, unsigned int len, uint8_t digest[SHA2_DIGEST_SIZE])
+{
+	sw_sha2_ctx ctx;
+	swSha2Init(&ctx);
+	swSha2BlockProcess(&ctx, message);
+	uint32_t* outBuff = ctx.hash;
+	memcpy(digest, outBuff, 32);
+	return 0;
+}
