@@ -246,7 +246,14 @@ int sw_sha2_update(sw_sha2_ctx* ctx, const uint8_t* msg, uint32_t msg_size)
     return 0;
 }
 
-
+int sw_sha2_final_test(sw_sha2_ctx* ctx, uint8_t digest[SHA2_DIGEST_SIZE]){
+	uint8_t* tbuff;
+	tbuff = (uint8_t*)ctx->hash;
+	 for (int i = 0; i < 32; i++){
+		 digest[i] = (uint8_t)(tbuff[i] & 0xFFu);
+	 }
+	 return 0;
+}
 /** \brief completes the final SHA256 calculation and returns the final digest/hash
  * \param[in]  ctx     ptr to context data structure
  * \param[out] digest  receives the computed digest of the SHA 256
@@ -336,7 +343,8 @@ int sw_sha256(const uint8_t* message, unsigned int len, uint8_t digest[SHA2_DIGE
     {
         if(0 == (status = sw_sha2_update(&ctx, message, len)))
         {
-            status = sw_sha2_final(&ctx, digest);
+        	status = sw_sha2_final(&ctx, digest);
+//            status = sw_sha2_final_test(&ctx, digest);
         }
     }
 
@@ -467,22 +475,22 @@ static int swSha2BlockProcess(swSha2Ctx_t* ctx, const uint8_t* block)
     return 0;
 }
 
-int sha2Append(swSha2Ctx_t const * ctx, const uint8_t messageChunk[], const uint32_t messageSize){
-	uint8_t* opBuff;
+int sha2Append(swSha2Ctx_t* ctx, const uint8_t messageChunk[], const uint32_t messageSize){
+//	const uint8_t* opBuff;
 	uint32_t messageLenght;
 	if( (NULL == ctx) || (NULL == messageChunk) )return -1;
-	opBuff = &messageChunk[0];
+//	opBuff = &messageChunk[0];
 	if(0 == messageSize){
 		messageLenght = messageChunk[-1];
 	}else{
 		messageLenght = messageSize;
 	}
 	int i = 0;
-	while(0 > messageLenght){
-		ctx->tblock[ctx->tblock_size++] = messageSize[i++];
+	while(0 < messageLenght){
+		ctx->tblock[ctx->tblock_size++] = messageChunk[i++];
 		messageLenght--;
 		if(SHA2_BLOCK_SIZE == ctx->tblock_size){
-			ctx->msg_size += i;
+			ctx->msg_size += SHA2_BLOCK_SIZE;
 			//Process block
 			swSha2BlockProcess(ctx, ctx->tblock);
 			ctx->tblock_size = 0;
@@ -496,11 +504,63 @@ int sha2Append(swSha2Ctx_t const * ctx, const uint8_t messageChunk[], const uint
 //	}
 	return 0;
 }
+int sha2Final_test(swSha2Ctx_t* ctx, uint8_t digest[SHA2_DIGEST_SIZE]){
+	uint8_t* tbuff;
+	tbuff = (uint8_t*)ctx->hash;
+	 for (int i = 0; i < 32; i++){
+			 digest[i] = (uint8_t)(tbuff[i] & 0xFFu);
+		 }
+	 return 0;
+}
+
+int sha2Final(swSha2Ctx_t* ctx, uint8_t digest[SHA2_DIGEST_SIZE]){
+	int i, j;
+	uint32_t msg_size_bits;//message size cannot exceed 536MB - seems unlikely in embedded uPC system thats why I use uint32_t not uint64_t according to RFC 6234
+	uint32_t byte_cnt = 4u;
+	if((NULL == ctx) || (NULL == digest)) return -1;
+	ctx->msg_size += ctx->tblock_size;
+	msg_size_bits = ctx->msg_size * 8U; //message size cannot exceed 536MB - seems unlikely in embedded uPC system
+	ctx->tblock[ctx->tblock_size++] = 0x80;//at this point always at least 1B is available in block
+	for(i=ctx->tblock_size; i < SHA2_BLOCK_SIZE; i++){
+		ctx->tblock[i] = 0x00;
+	}
+	if( ctx->tblock_size > (SHA2_BLOCK_SIZE - (SHA2_APPEND_SIZE)) ){
+		//Process block
+		swSha2BlockProcess(ctx, ctx->tblock);
+		ctx->tblock_size = 0;
+		for(i=ctx->tblock_size; i < SHA2_BLOCK_SIZE; i++){
+			ctx->tblock[i] = 0x00;
+		}
+	}
+	ctx->tblock_size = (SHA2_BLOCK_SIZE - (SHA2_APPEND_SIZE-4U));//append size to last 4 B
+	ctx->tblock[ctx->tblock_size++] = (uint8_t)((msg_size_bits >> 24U) & UINT8_MAX);
+	ctx->tblock[ctx->tblock_size++] = (uint8_t)((msg_size_bits >> 16U) & UINT8_MAX);
+	ctx->tblock[ctx->tblock_size++] = (uint8_t)((msg_size_bits >> 8U) & UINT8_MAX);
+	ctx->tblock[ctx->tblock_size++] = (uint8_t)((msg_size_bits >> 0U) & UINT8_MAX);
+	swSha2BlockProcess(ctx, ctx->tblock);
+	// All blocks have been processed.
+	// Concatenate the hashes to produce digest, MSB of every hash first.
+	for (i = 0; i < 8; i++)
+	{
+		for (j = byte_cnt - 1; j >= 0; j--)
+		{
+			if ((i <= (INT32_MAX / byte_cnt)) && ((i * byte_cnt) <= (INT32_MAX - j)))
+			{
+				digest[i * byte_cnt + j] = (uint8_t)(ctx->hash[i] & 0xFFu);
+			}
+			ctx->hash[i] >>= 8u;
+		}
+	}
+	return 0;
+}
 
 int sha2(const uint8_t* message, unsigned int len, uint8_t digest[SHA2_DIGEST_SIZE])
 {
 	swSha2Ctx_t ctx;
-
+	swSha2Init(&ctx);
+	sha2Append(&ctx, message, len);
+//	sha2Final_test(&ctx, digest);
+	sha2Final(&ctx, digest);
 	return 0;
 }
 

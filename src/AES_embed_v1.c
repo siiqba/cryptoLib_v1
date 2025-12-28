@@ -14,6 +14,23 @@
 
 #include "sha2.h"
 
+int compareHash(uint8_t *a, uint8_t* b, uint32_t hashLen){
+	for(int i=0; i<hashLen; i++)
+		if(a[i] != b[i]) return i;
+	return -1;
+}
+
+void sha2_test_fun(uint8_t* buff, int messageLen){
+	uint8_t hash[32]={0};
+	uint8_t hash2[32]={0};
+	printf("%i: ", messageLen);
+	sw_sha256(buff, messageLen, hash);
+	sha2(buff, messageLen, hash2);
+	printf("%i\n", compareHash(hash, hash2, 32));
+	fflush(stdout);
+}
+
+
 int main(int argc, char* argv[]) {
 	uint8_t buff[256]={	0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x00,\
 						0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x00,\
@@ -31,24 +48,25 @@ int main(int argc, char* argv[]) {
 						0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x00,\
 						0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x00,\
 						0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x00};
-	uint8_t hash[64]={0};
-	uint8_t hash2[64]={0};
-	uint8_t _smartBuff[10+4] = {0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
-	uint16_t* temp16ptr = (uint16_t*)_smartBuff;
-	temp16ptr[0] = 10;
-	temp16ptr[1] = 5;
-	uint8_t* smartBuff = &_smartBuff[4];
+//	uint8_t hash[32]={0};
+//	uint8_t hash2[32]={0};
+//	uint8_t _smartBuff[10+4] = {0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
+//	uint16_t* temp16ptr = (uint16_t*)_smartBuff;
+//	temp16ptr[0] = 10;
+//	temp16ptr[1] = 5;
+//	uint8_t* smartBuff = &_smartBuff[4];
+//
+//	uint16_t dummy1 = ((uint16_t*)smartBuff)[-2];
+//	uint16_t dummy2 = ((uint16_t*)smartBuff)[-1];
+//	(void) dummy1;
+//	(void) dummy2;
+	int messageLen;
+	for(messageLen = 0; messageLen < 256; messageLen ++){
+		sha2_test_fun(buff, messageLen);
+	}
 
-	uint16_t dummy1 = ((uint16_t*)smartBuff)[-2];
-	uint16_t dummy2 = ((uint16_t*)smartBuff)[-1];
-	(void) dummy1;
-	(void) dummy2;
-
-
-
-	sw_sha256(buff, 64+64+64, hash);
-
-	sha2(buff, 60, hash2);
-
+	printf("\n");
 	return EXIT_SUCCESS;
 }
+
+

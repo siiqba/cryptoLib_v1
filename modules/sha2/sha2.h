@@ -44,6 +44,7 @@ static const uint32_t sha2_255_k[] = {
 #pragma message "SHA256"
 #define SHA2_DIGEST_SIZE (32U)
 #define SHA2_BLOCK_SIZE  (64U)
+#define SHA2_APPEND_SIZE  (8U)
 
 #elif  defined(SHA2_DEFINITION) && (SHA2_DEFINITION == 384)
 #pragma message "SHA384"
