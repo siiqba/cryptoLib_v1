@@ -33,10 +33,22 @@ int main(int argc, char* argv[]) {
 						0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x00};
 	uint8_t hash[64]={0};
 	uint8_t hash2[64]={0};
+	uint8_t _smartBuff[10+4] = {0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
+	uint16_t* temp16ptr = (uint16_t*)_smartBuff;
+	temp16ptr[0] = 10;
+	temp16ptr[1] = 5;
+	uint8_t* smartBuff = &_smartBuff[4];
 
-	sw_sha256(buff, 64+64+64+10, hash);
+	uint16_t dummy1 = ((uint16_t*)smartBuff)[-2];
+	uint16_t dummy2 = ((uint16_t*)smartBuff)[-1];
+	(void) dummy1;
+	(void) dummy2;
 
-	sha2(buff, 32, hash2);
+
+
+	sw_sha256(buff, 64+64+64, hash);
+
+	sha2(buff, 60, hash2);
 
 	return EXIT_SUCCESS;
 }

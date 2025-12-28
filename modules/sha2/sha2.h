@@ -77,9 +77,10 @@ typedef struct
 #endif
 } sw_sha2_ctx;
 
-typedef struct swSha2Ctx_str
+typedef struct
 {
-    uint32_t msg_pos;				//!< Total number of message bytes processed
+	uint32_t msg_size;						//!< Accumulated size of message (sum of all chunks)
+    uint32_t msg_ind;						//!< Total number of message bytes processed
     uint32_t tblock_size;					//!< Number of bytes in current block
     uint8_t  tblock[SHA2_BLOCK_SIZE * 2];	//!< Unprocessed message storage
 #if (SHA2_DEFINITION == 256)

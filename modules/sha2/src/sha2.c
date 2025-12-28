@@ -277,7 +277,7 @@ int sw_sha2_final(sw_sha2_ctx* ctx, uint8_t digest[SHA2_DIGEST_SIZE])
     pad_zero_count = (SHA2_BLOCK_SIZE - ((ctx->block_size + 9U) % SHA2_BLOCK_SIZE)) % SHA2_BLOCK_SIZE;
 
     // Append a single 1 bit
-    ctx->block[ctx->block_size++] = 0x80;
+    ctx->block[ctx->block_size++] = 0x80; //na koniec bloku dodwane jest 1b
 
     // Add padding zeros plus upper 4 bytes of total msg size in bits (only supporting 32bit message bit counts)
     (void)memset(&ctx->block[ctx->block_size], 0, (size_t)pad_zero_count + 4U);
@@ -387,10 +387,10 @@ static int swSha2BlockProcess(swSha2Ctx_t* ctx, const uint8_t* block)
 	uint32_t maj, ch = 0U;
 	uint32_t rotate_register[8] = {0};
 
-    if((NULL == ctx) || (NULL == block))
-    {
-        return -1;
-    }
+//    if((NULL == ctx) || (NULL == block))
+//    {
+//        return -1;
+//    }
 
     union
     {
@@ -464,13 +464,47 @@ static int swSha2BlockProcess(swSha2Ctx_t* ctx, const uint8_t* block)
 	{
 		ctx->hash[i] += rotate_register[i];
 	}
-
-
     return 0;
 }
 
+int sha2Append(swSha2Ctx_t const * ctx, const uint8_t messageChunk[], const uint32_t messageSize){
+	uint8_t* opBuff;
+	uint32_t messageLenght;
+	if( (NULL == ctx) || (NULL == messageChunk) )return -1;
+	opBuff = &messageChunk[0];
+	if(0 == messageSize){
+		messageLenght = messageChunk[-1];
+	}else{
+		messageLenght = messageSize;
+	}
+	int i = 0;
+	while(0 > messageLenght){
+		ctx->tblock[ctx->tblock_size++] = messageSize[i++];
+		messageLenght--;
+		if(SHA2_BLOCK_SIZE == ctx->tblock_size){
+			ctx->msg_size += i;
+			//Process block
+			swSha2BlockProcess(ctx, ctx->tblock);
+			ctx->tblock_size = 0;
+		}
+	}
+//	if(SHA2_BLOCK_SIZE == ctx->tblock_size){
+//		ctx->msg_size += i;
+//		//Process block
+//		swSha2BlockProcess(ctx, ctx->tblock);
+//		ctx->tblock_size = 0;
+//	}
+	return 0;
+}
 
 int sha2(const uint8_t* message, unsigned int len, uint8_t digest[SHA2_DIGEST_SIZE])
+{
+	swSha2Ctx_t ctx;
+
+	return 0;
+}
+
+int sha2B(const uint8_t* message, unsigned int len, uint8_t digest[SHA2_DIGEST_SIZE])
 {
 	swSha2Ctx_t ctx;
 	if((NULL == message) || (NULL == digest) || (0 >= len))
@@ -479,25 +513,30 @@ int sha2(const uint8_t* message, unsigned int len, uint8_t digest[SHA2_DIGEST_SI
 
 	}
 	swSha2Init(&ctx);
-	int i;
+//	int i;
 	uint32_t copy_size, rem_size;
 //	int block_Count = len / SHA2_BLOCK_SIZE;
 	while(len){
 		rem_size = SHA2_BLOCK_SIZE - ctx.tblock_size;
 		copy_size = len > rem_size ? rem_size : len;//MINIMUM
-		(void)memcpy(&ctx.tblock[ctx.tblock_size], &message[ctx.msg_pos], copy_size);
+		(void)memcpy(&ctx.tblock[ctx.tblock_size], &message[ctx.msg_ind], copy_size);
 		ctx.tblock_size += copy_size;
-		ctx.msg_pos += copy_size;
+		ctx.msg_ind += copy_size;
 		len -= copy_size;
 		if (ctx.tblock_size < SHA2_BLOCK_SIZE) break;
-		if (0 != swSha2BlockProcess(&ctx, &ctx.tblock)){
+		if (0 != swSha2BlockProcess(&ctx, ctx.tblock)){
 			return -1;
 		}
-
+		ctx.tblock_size = 0;
+	}
+	if(ctx.tblock_size < SHA2_BLOCK_SIZE){
+		ctx.tblock[ctx.tblock_size++] = 0x80;
+		(void)memset(&ctx.tblock[ctx.tblock_size], 0, SHA2_BLOCK_SIZE - ctx.tblock_size);
+		ctx.tblock_size += SHA2_BLOCK_SIZE - ctx.tblock_size;
+//		ctx.tblock[ctx.tblock_size] = 0x80;
 	}
 
 
-	swSha2BlockProcess(&ctx, message);
 	uint32_t* outBuff = ctx.hash;
 	memcpy(digest, outBuff, 32);
 	return 0;
