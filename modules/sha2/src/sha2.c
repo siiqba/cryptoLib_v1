@@ -8,7 +8,7 @@
 #include "sha2.h"
 #include <stdio.h>
 #include <memory.h>
-#include <stdbool.h>
+//#include <stdbool.h>
 
 #define rotate_right(value, places) (((value) >> (places)) | ((value) << (32U - (places))))
 #define rotate_right_64bit(value, places) (((value) >> (places)) | ((value) << (64U - (places))))
