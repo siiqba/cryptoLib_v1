@@ -136,27 +136,37 @@ void base64_Encode_test(const uint8_t* testVect, const uint32_t testVectLenght,\
 
 }
 
-void x25519KeyGenTest(uint8_t seed1[], uint8_t seed2[]){
+void x25519Test(uint8_t seed1[], uint8_t seed2[]){
 	uint8_t Asecret_key[X25519_KEY_SIZE];
 	uint8_t Apublic_key[X25519_KEY_SIZE];
 	uint8_t Bsecret_key[X25519_KEY_SIZE];
 	uint8_t Bpublic_key[X25519_KEY_SIZE];
+	uint8_t Ashared_secret[X25519_SHARED_SIZE], Bshared_secret[X25519_SHARED_SIZE];
 
-	compact_x25519_keygen(Asecret_key, Apublic_key, seed1);
+	swX25519Keygen(Asecret_key, Apublic_key, seed1);
 	printf("A >> SECRET KEY:\n");
 	printHexTest(Asecret_key, X25519_KEY_SIZE);
 	printHex(Asecret_key, X25519_KEY_SIZE, 8);
-	printf("B >> PUBLIC KEY:\n");
+	printf("A >> PUBLIC KEY:\n");
 	printHexTest(Apublic_key, X25519_KEY_SIZE);
 	printHex(Apublic_key, X25519_KEY_SIZE, 8);
 
-	compact_x25519_keygen(Bsecret_key, Bpublic_key, seed2);
-	printf("A >> SECRET KEY:\n");
+	swX25519Keygen(Bsecret_key, Bpublic_key, seed2);
+	printf("B >> SECRET KEY:\n");
 	printHexTest(Bsecret_key, X25519_KEY_SIZE);
 	printHex(Bsecret_key, X25519_KEY_SIZE, 8);
 	printf("B >> PUBLIC KEY:\n");
 	printHexTest(Bpublic_key, X25519_KEY_SIZE);
 	printHex(Bpublic_key, X25519_KEY_SIZE, 8);
+
+	swX25519Shared(Ashared_secret, Asecret_key, Bpublic_key);
+	swX25519Shared(Bshared_secret, Bsecret_key, Apublic_key);
+	printf("A >> SHARET SECRET:\n");
+	printHexTest(Ashared_secret, X25519_SHARED_SIZE);
+	printHex(Ashared_secret, X25519_SHARED_SIZE, 8);
+	printf("B >> SHARET SECRET:\n");
+	printHexTest(Bshared_secret, X25519_SHARED_SIZE);
+	printHex(Bshared_secret, X25519_SHARED_SIZE, 8);
 
 }
 
@@ -269,7 +279,7 @@ int main(int argc, char* argv[]) {
 
 // X25519 test =================================================================>
 	printf("X25519 TEST -->\n");
-	x25519KeyGenTest(rfc7748_alice_sec, rfc7748_bob_sec);
+	x25519Test(rfc7748_alice_sec, rfc7748_bob_sec);
 	printf("X25519 TEST END\n");
 // END X25519 test =============================================================>
 	(void)buff;

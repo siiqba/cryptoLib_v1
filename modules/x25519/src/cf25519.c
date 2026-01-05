@@ -9,7 +9,16 @@
 const uint8_t f25519_one[F25519_SIZE] = {1};
 const uint8_t c25519_base_x[F25519_SIZE] = {9};
 
-void f25519_mul__distinct(uint8_t *r, const uint8_t *a, const uint8_t *b)
+void *compact_wipe(void *data, size_t length) {
+// simplification of: https://www.cryptologie.net/article/419/zeroing-memory-compiler-optimizations-and-memset_s/
+	 volatile unsigned char *p = data;
+	 while (length--){
+		 *p++ = 0;
+	 }
+	return data;
+}
+
+void swF25519Mul_distinct(uint8_t *r, const uint8_t *a, const uint8_t *b)
 {
 	uint32_t c = 0;
 	int i;
@@ -38,7 +47,7 @@ void f25519_mul__distinct(uint8_t *r, const uint8_t *a, const uint8_t *b)
 	}
 }
 
-void f25519_select(uint8_t *dst,
+void swF25519Select(uint8_t *dst,
 		   const uint8_t *zero, const uint8_t *one,
 		   uint8_t condition)
 {
@@ -49,7 +58,7 @@ void f25519_select(uint8_t *dst,
 		dst[i] = zero[i] ^ (mask & (one[i] ^ zero[i]));
 }
 
-void f25519_add(uint8_t *r, const uint8_t *a, const uint8_t *b)
+void swF25519Add(uint8_t *r, const uint8_t *a, const uint8_t *b)
 {
 	uint16_t c = 0;
 	int i;
@@ -72,7 +81,7 @@ void f25519_add(uint8_t *r, const uint8_t *a, const uint8_t *b)
 	}
 }
 
-void f25519_sub(uint8_t *r, const uint8_t *a, const uint8_t *b)
+void swF25519Sub(uint8_t *r, const uint8_t *a, const uint8_t *b)
 {
 	uint32_t c = 0;
 	int i;
@@ -96,7 +105,7 @@ void f25519_sub(uint8_t *r, const uint8_t *a, const uint8_t *b)
 	}
 }
 
-static inline void f25519_copy(uint8_t *x, const uint8_t *a)
+static inline void swF25519Copy(uint8_t *x, const uint8_t *a)
 {
 	int i;
 	for(i = 0; i < F25519_SIZE; i++)
@@ -104,14 +113,14 @@ static inline void f25519_copy(uint8_t *x, const uint8_t *a)
 //	memcpy(x, a, F25519_SIZE);
 }
 
-static inline void c25519_prepare(uint8_t *key)
+static inline void swC25519Prepare(uint8_t *key)
 {
 	key[0] &= 0xf8;
 	key[31] &= 0x7f;
 	key[31] |= 0x40;
 }
 
-void f25519_mul_c(uint8_t *r, const uint8_t *a, uint32_t b)
+void swF25519Mul_c(uint8_t *r, const uint8_t *a, uint32_t b)
 {
 	uint32_t c = 0;
 	int i;
@@ -133,7 +142,7 @@ void f25519_mul_c(uint8_t *r, const uint8_t *a, uint32_t b)
 	}
 }
 
-void f25519_inv__distinct(uint8_t *r, const uint8_t *x)
+void swF25519Inv_distinct(uint8_t *r, const uint8_t *x)
 {
 	uint8_t s[F25519_SIZE];
 	int i;
@@ -155,35 +164,35 @@ void f25519_inv__distinct(uint8_t *r, const uint8_t *x)
 	 */
 
 	/* 1 1 */
-	f25519_mul__distinct(s, x, x);
-	f25519_mul__distinct(r, s, x);
+	swF25519Mul_distinct(s, x, x);
+	swF25519Mul_distinct(r, s, x);
 
 	/* 1 x 248 */
 	for (i = 0; i < 248; i++) {
-		f25519_mul__distinct(s, r, r);
-		f25519_mul__distinct(r, s, x);
+		swF25519Mul_distinct(s, r, r);
+		swF25519Mul_distinct(r, s, x);
 	}
 
 	/* 0 */
-	f25519_mul__distinct(s, r, r);
+	swF25519Mul_distinct(s, r, r);
 
 	/* 1 */
-	f25519_mul__distinct(r, s, s);
-	f25519_mul__distinct(s, r, x);
+	swF25519Mul_distinct(r, s, s);
+	swF25519Mul_distinct(s, r, x);
 
 	/* 0 */
-	f25519_mul__distinct(r, s, s);
+	swF25519Mul_distinct(r, s, s);
 
 	/* 1 */
-	f25519_mul__distinct(s, r, r);
-	f25519_mul__distinct(r, s, x);
+	swF25519Mul_distinct(s, r, r);
+	swF25519Mul_distinct(r, s, x);
 
 	/* 1 */
-	f25519_mul__distinct(s, r, r);
-	f25519_mul__distinct(r, s, x);
+	swF25519Mul_distinct(s, r, r);
+	swF25519Mul_distinct(r, s, x);
 }
 
-void f25519_normalize(uint8_t *x)
+void swF25519Normalize(uint8_t *x)
 {
 	uint8_t minusp[F25519_SIZE];
 	uint16_t c;
@@ -215,7 +224,7 @@ void f25519_normalize(uint8_t *x)
 	minusp[31] = c;
 
 	/* Load x-p if no underflow */
-	f25519_select(x, minusp, x, (c >> 15) & 1);
+	swF25519Select(x, minusp, x, (c >> 15) & 1);
 }
 
 /* Double an X-coordinate */
@@ -234,18 +243,18 @@ static void xc_double(uint8_t *x3, uint8_t *z3,
 	uint8_t x1z1[F25519_SIZE];
 	uint8_t a[F25519_SIZE];
 
-	f25519_mul__distinct(x1sq, x1, x1);
-	f25519_mul__distinct(z1sq, z1, z1);
-	f25519_mul__distinct(x1z1, x1, z1);
+	swF25519Mul_distinct(x1sq, x1, x1);
+	swF25519Mul_distinct(z1sq, z1, z1);
+	swF25519Mul_distinct(x1z1, x1, z1);
 
-	f25519_sub(a, x1sq, z1sq);
-	f25519_mul__distinct(x3, a, a);
+	swF25519Sub(a, x1sq, z1sq);
+	swF25519Mul_distinct(x3, a, a);
 
-	f25519_mul_c(a, x1z1, 486662);
-	f25519_add(a, x1sq, a);
-	f25519_add(a, z1sq, a);
-	f25519_mul__distinct(x1sq, x1z1, a);
-	f25519_mul_c(z3, x1sq, 4);
+	swF25519Mul_c(a, x1z1, 486662);
+	swF25519Add(a, x1sq, a);
+	swF25519Add(a, z1sq, a);
+	swF25519Mul_distinct(x1sq, x1z1, a);
+	swF25519Mul_c(z3, x1sq, 4);
 }
 
 /* Differential addition */
@@ -273,24 +282,24 @@ static void xc_diffadd(uint8_t *x5, uint8_t *z5,
 	uint8_t a[F25519_SIZE];
 	uint8_t b[F25519_SIZE];
 
-	f25519_add(a, x2, z2);
-	f25519_sub(b, x3, z3); /* D */
-	f25519_mul__distinct(da, a, b);
+	swF25519Add(a, x2, z2);
+	swF25519Sub(b, x3, z3); /* D */
+	swF25519Mul_distinct(da, a, b);
 
-	f25519_sub(b, x2, z2);
-	f25519_add(a, x3, z3); /* C */
-	f25519_mul__distinct(cb, a, b);
+	swF25519Sub(b, x2, z2);
+	swF25519Add(a, x3, z3); /* C */
+	swF25519Mul_distinct(cb, a, b);
 
-	f25519_add(a, da, cb);
-	f25519_mul__distinct(b, a, a);
-	f25519_mul__distinct(x5, z1, b);
+	swF25519Add(a, da, cb);
+	swF25519Mul_distinct(b, a, a);
+	swF25519Mul_distinct(x5, z1, b);
 
-	f25519_sub(a, da, cb);
-	f25519_mul__distinct(b, a, a);
-	f25519_mul__distinct(z5, x1, b);
+	swF25519Sub(a, da, cb);
+	swF25519Mul_distinct(b, a, a);
+	swF25519Mul_distinct(z5, x1, b);
 }
 
-void c25519_smult(uint8_t *result, const uint8_t *q, const uint8_t *e)
+void swC25519Smult(uint8_t *result, const uint8_t *q, const uint8_t *e)
 {
 	/* Current point: P_m */
 	uint8_t xm[F25519_SIZE];
@@ -303,7 +312,7 @@ void c25519_smult(uint8_t *result, const uint8_t *q, const uint8_t *e)
 	int i;
 
 	/* Note: bit 254 is assumed to be 1 */
-	f25519_copy(xm, q);
+	swF25519Copy(xm, q);
 
 	for (i = 253; i >= 0; i--) {
 		const int bit = (e[i >> 3] >> (i & 7)) & 1;
@@ -312,6 +321,7 @@ void c25519_smult(uint8_t *result, const uint8_t *q, const uint8_t *e)
 
 		/* From P_m and P_(m-1), compute P_(2m) and P_(2m-1) */
 		xc_diffadd(xm1, zm1, q, f25519_one, xm, zm, xm1, zm1);
+//		xc_diffadd(xm1, zm1, q, f25519_one, xm, zm, xm1, zm1);
 		xc_double(xm, zm, xm, zm);
 
 		/* Compute P_(2m+1) */
@@ -321,26 +331,41 @@ void c25519_smult(uint8_t *result, const uint8_t *q, const uint8_t *e)
 		 *   bit = 1 --> (P_(2m+1), P_(2m))
 		 *   bit = 0 --> (P_(2m), P_(2m-1))
 		 */
-		f25519_select(xm1, xm1, xm, bit);
-		f25519_select(zm1, zm1, zm, bit);
-		f25519_select(xm, xm, xms, bit);
-		f25519_select(zm, zm, zms, bit);
+		swF25519Select(xm1, xm1, xm, bit);
+		swF25519Select(zm1, zm1, zm, bit);
+		swF25519Select(xm, xm, xms, bit);
+		swF25519Select(zm, zm, zms, bit);
 	}
 
 	/* Freeze out of projective coordinates */
-	f25519_inv__distinct(zm1, zm);
-	f25519_mul__distinct(result, zm1, xm);
-	f25519_normalize(result);
+	swF25519Inv_distinct(zm1, zm);
+	swF25519Mul_distinct(result, zm1, xm);
+	swF25519Normalize(result);
 }
 
-void compact_x25519_keygen(
+void swX25519Keygen(
     uint8_t private_key[X25519_KEY_SIZE],
     uint8_t public_key[X25519_KEY_SIZE],
     uint8_t random_seed[X25519_KEY_SIZE]
 ) {
     memcpy(private_key, random_seed, X25519_KEY_SIZE);
 //    compact_wipe(random_seed, X25519_KEY_SIZE);
-    c25519_prepare(private_key);
-    c25519_smult(public_key, c25519_base_x, private_key);
+    swC25519Prepare(private_key);
+    swC25519Smult(public_key, c25519_base_x, private_key);
     memcpy(private_key, random_seed, X25519_KEY_SIZE);
+}
+
+void swX25519Shared(
+    uint8_t shared_secret[X25519_SHARED_SIZE],
+    const uint8_t my_private_key[X25519_KEY_SIZE],
+    const uint8_t their_public_key[X25519_KEY_SIZE]
+) {
+    // Ensure that supplied private key is clamped (fix issue #1).
+    // Calling `c25519_prepare` multiple times for the same private key
+    // is OK because it won't modify already clamped key.
+    uint8_t clamped_private_key[X25519_KEY_SIZE];
+    memcpy(clamped_private_key, my_private_key, X25519_KEY_SIZE);
+    swC25519Prepare(clamped_private_key);
+    swC25519Smult(shared_secret, their_public_key, clamped_private_key);
+    (void)compact_wipe(clamped_private_key, X25519_KEY_SIZE);
 }
