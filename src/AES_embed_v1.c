@@ -16,7 +16,22 @@
 #include "sha2.h"
 #include "base64.h"
 #include "base64_testVectors.h"
+#include "x25519.h"
 
+void printHex(const uint8_t *array, size_t length, const uint8_t modBreak) {
+    for (size_t i = 0; i < length; ++i) {
+        printf("%02X", array[i]);
+        if ((i + 1) % modBreak == 0) printf("\n"); // New line after every 8 bytes
+        else if (i + 1 < length) printf(" ");
+    }
+    printf("\n");
+}
+void printHexTest(const uint8_t *array, size_t length) {
+    for (size_t i = 0; i < length; ++i) {
+        printf("%02X", array[i]);
+    }
+    printf("\n");
+}
 int compareHash(uint8_t *a, uint8_t* b, uint32_t hashLen){
 	for(int i=0; i<hashLen; i++)
 		if(a[i] != b[i]) return i;
@@ -121,6 +136,30 @@ void base64_Encode_test(const uint8_t* testVect, const uint32_t testVectLenght,\
 
 }
 
+void x25519KeyGenTest(uint8_t seed1[], uint8_t seed2[]){
+	uint8_t Asecret_key[X25519_KEY_SIZE];
+	uint8_t Apublic_key[X25519_KEY_SIZE];
+	uint8_t Bsecret_key[X25519_KEY_SIZE];
+	uint8_t Bpublic_key[X25519_KEY_SIZE];
+
+	compact_x25519_keygen(Asecret_key, Apublic_key, seed1);
+	printf("A >> SECRET KEY:\n");
+	printHexTest(Asecret_key, X25519_KEY_SIZE);
+	printHex(Asecret_key, X25519_KEY_SIZE, 8);
+	printf("B >> PUBLIC KEY:\n");
+	printHexTest(Apublic_key, X25519_KEY_SIZE);
+	printHex(Apublic_key, X25519_KEY_SIZE, 8);
+
+	compact_x25519_keygen(Bsecret_key, Bpublic_key, seed2);
+	printf("A >> SECRET KEY:\n");
+	printHexTest(Bsecret_key, X25519_KEY_SIZE);
+	printHex(Bsecret_key, X25519_KEY_SIZE, 8);
+	printf("B >> PUBLIC KEY:\n");
+	printHexTest(Bpublic_key, X25519_KEY_SIZE);
+	printHex(Bpublic_key, X25519_KEY_SIZE, 8);
+
+}
+
 int main(int argc, char* argv[]) {
 	uint8_t buff[256]={	0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0xAA,\
 						0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0xAA,\
@@ -138,6 +177,20 @@ int main(int argc, char* argv[]) {
 						0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0xAA,\
 						0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0xAA,\
 						0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0xAA};
+
+	uint8_t rfc7748_alice_sec[X25519_KEY_SIZE] = {
+		0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+		0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45,
+		0xdf, 0x4c, 0x2f, 0x87, 0xeb, 0xc0, 0x99, 0x2a,
+		0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a
+		};
+	uint8_t rfc7748_bob_sec[X25519_KEY_SIZE] = {
+		0x5d, 0xab, 0x08, 0x7e, 0x62, 0x4a, 0x8a, 0x4b,
+		0x79, 0xe1, 0x7f, 0x8b, 0x83, 0x80, 0x0e, 0xe6,
+		0x6f, 0x3b, 0xb1, 0x29, 0x26, 0x18, 0xb6, 0xfd,
+		0x1c, 0x2f, 0x8b, 0x27, 0xff, 0x88, 0xe0, 0xeb
+	};
+
 //	uint8_t hash[32]={0};
 //	uint8_t hash2[32]={0};
 //	uint8_t _smartBuff[10+4] = {0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0};
@@ -204,20 +257,21 @@ int main(int argc, char* argv[]) {
 // END base64 test ============================================================>
 
 // SHA512 test =================================================================>
-//	uint8_t hash512[SHA512_DIGEST_SIZE]={0};
-//	uint8_t hash512B[SHA512_DIGEST_SIZE]={0};
-	printf("SHA256 TEST -->\n");
-	for(int i=0; i<256; i++){
-		sha2_test_fun(buff, i);
-	}
-	printf("SHA512 TEST -->\n");
-	for(int i=0; i<256; i++){
-		sha5_test_fun(buff, i);
-	}
-
-//	sw_sha512(buff, 4, hash512B);
+//	printf("SHA256 TEST -->\n");
+//	for(int i=0; i<256; i++){
+//		sha2_test_fun(buff, i);
+//	}
+//	printf("SHA512 TEST -->\n");
+//	for(int i=0; i<256; i++){
+//		sha5_test_fun(buff, i);
+//	}
 // END SHA512 test =============================================================>
 
+// X25519 test =================================================================>
+	printf("X25519 TEST -->\n");
+	x25519KeyGenTest(rfc7748_alice_sec, rfc7748_bob_sec);
+	printf("X25519 TEST END\n");
+// END X25519 test =============================================================>
 	(void)buff;
 	return EXIT_SUCCESS;
 }
