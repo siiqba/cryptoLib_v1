@@ -15,8 +15,10 @@
 
 #include "sha2.h"
 #include "base64.h"
-#include "base64_testVectors.h"
 #include "x25519.h"
+#include "aes.h"
+
+#include "base64_testVectors.h"
 
 void printHex(const uint8_t *array, size_t length, const uint8_t modBreak) {
     for (size_t i = 0; i < length; ++i) {
