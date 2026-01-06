@@ -107,24 +107,6 @@ extern "C" {
 
 typedef struct
 {
-    uint32_t total_msg_size;				//!< Total number of message bytes processed
-    uint32_t block_size;					//!< Number of bytes in current block
-    uint8_t  block[SHA256_BLOCK_SIZE * 2];	//!< Unprocessed message storage
-
-    uint32_t hash[8];						//!< Hash state SHA256
-
-} sw_sha2_ctx;
-typedef struct
-{
-    uint32_t total_msg_size;				//!< Total number of message bytes processed
-    uint32_t block_size;					//!< Number of bytes in current block
-    uint8_t  block[SHA512_BLOCK_SIZE * 2];	//!< Unprocessed message storage
-
-    uint64_t hash[8];						//!< Hash state SHA256
-} sw_sha512_ctx;
-
-typedef struct
-{
 	uint32_t msg_size;						//!< Accumulated size of message (sum of all chunks)
     uint32_t tblock_size;					//!< Number of bytes in current block
     uint8_t  tblock[SHA256_BLOCK_SIZE];		//!< Unprocessed message storage
@@ -139,8 +121,8 @@ typedef struct
     uint64_t hash[8];                       //!< Hash state
 } swSha512Ctx_t;
 
-int sw_sha256(const uint8_t* message, unsigned int len, uint8_t digest[SHA256_DIGEST_SIZE]);
-int sw_sha512(const uint8_t* message, unsigned int len, uint8_t digest[SHA512_DIGEST_SIZE]);
+//int sw_sha256(const uint8_t* message, unsigned int len, uint8_t digest[SHA256_DIGEST_SIZE]);
+//int sw_sha512(const uint8_t* message, unsigned int len, uint8_t digest[SHA512_DIGEST_SIZE]);
 
 
 int swSha256Init(swSha256Ctx_t* ctx);

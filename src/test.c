@@ -19,6 +19,7 @@
 #include "aes.h"
 
 #include "base64_testVectors.h"
+#include "sha2_testVectors.h"
 
 void printHex(const uint8_t *array, size_t length, const uint8_t modBreak) {
     for (size_t i = 0; i < length; ++i) {
@@ -40,41 +41,50 @@ int compareHash(uint8_t *a, uint8_t* b, uint32_t hashLen){
 	return -1;
 }
 
-void sha5_test_fun(uint8_t* vectorIn, int vectorInLen){
-	uint8_t hash[64]={0};
-	uint8_t hash2[64]={0};
-	printf("%i: ", vectorInLen);
+void sha5_test_fun(const uint8_t* vectorIn, const unsigned int vectorInLen, uint8_t* vectorOut, const unsigned int vectorOutLen){
+	uint8_t hash[64];
+	int i;
+//	uint8_t hash2[vectorOut]={0};
+	printf("SHA2-512 vect. len %03i: Test: ", vectorInLen);
 //	sw_sha256(buff, messageLen, hash);
-	sw_sha512(vectorIn, vectorInLen, hash2);
+//	sw_sha512(vectorIn, vectorInLen, hash2);
 	swSha512(vectorIn, vectorInLen, hash);
-	printf("%i\n", compareHash(hash, hash2, 64));
+	i = compareHash(hash, vectorOut, vectorOutLen);
+	if(-1 == i) printf("OK");
+	else printf("ERR at index: %d", i);
+	printf("\n");
 	fflush(stdout);
 }
 
-void sha2_test_fun(uint8_t* buff, int messageLen){
-	uint8_t hash[32]={0};
-	uint8_t hash2[32]={0};
-	printf("%i: ", messageLen);
-	sw_sha256(buff, messageLen, hash);
-	swSha256(buff, messageLen, hash2);
-	printf("%i\n", compareHash(hash, hash2, 32));
+void sha2_test_fun(const uint8_t* vectorIn, const unsigned int vectorInLen, uint8_t* vectorOut, const unsigned int vectorOutLen){
+	uint8_t hash[32];
+	int i;
+//	uint8_t hash2[vectorOut]={0};
+	printf("SHA2-256 vect. len %03d: Test: ", vectorInLen);
+//	sw_sha256(buff, messageLen, hash);
+//	sw_sha512(vectorIn, vectorInLen, hash2);
+	swSha256(vectorIn, vectorInLen, hash);
+	i = compareHash(hash, vectorOut, vectorOutLen);
+	if(-1 == i) printf("OK");
+	else printf("ERR at index: %d", i);
+	printf("\n");
 	fflush(stdout);
 }
 
 void sha2_test2_fun(uint8_t* buff, int chunkSize, int chunks){
-	uint8_t hash[32]={0};
-	uint8_t hash2[32]={0};
-	printf("chunk size: %i; chunks: %i, message size: %i -> ", chunkSize, chunks, (chunks*chunkSize));
-	sw_sha256(buff, (chunks*chunkSize), hash);
-	swSha256Ctx_t ctx;
-	swSha256Init(&ctx);
-	for(int i=0; i < chunks; i++){
-		swSha256Append(&ctx, &buff[i*chunkSize], chunkSize);
-	}
-	swSha256Final(&ctx, hash2);
-//	sha2(buff, messageLen, hash2);
-	printf("%i\n", compareHash(hash, hash2, 32));
-	fflush(stdout);
+//	uint8_t hash[32]={0};
+//	uint8_t hash2[32]={0};
+//	printf("chunk size: %i; chunks: %i, message size: %i -> ", chunkSize, chunks, (chunks*chunkSize));
+//	sw_sha256(buff, (chunks*chunkSize), hash);
+//	swSha256Ctx_t ctx;
+//	swSha256Init(&ctx);
+//	for(int i=0; i < chunks; i++){
+//		swSha256Append(&ctx, &buff[i*chunkSize], chunkSize);
+//	}
+//	swSha256Final(&ctx, hash2);
+////	sha2(buff, messageLen, hash2);
+//	printf("%i\n", compareHash(hash, hash2, 32));
+//	fflush(stdout);
 }
 
 void base64_Decode_test(const uint8_t* testVectBase64, const uint32_t testVectBase64Lenght,\
@@ -242,42 +252,53 @@ int main(int argc, char* argv[]) {
 //	(void) len;
 //	(void)messageOrg;
 
+//SHA2 tests ==============================================================>
+	printf("<====================Start SHA2 test===========================>\n\n");
+	fflush(stdout);
+	sha2_test_fun(sha2_testVector1In, sha2_testVector1InLenght, sha2_testVector1Out256, sha2_testVector1Out256Lenght);
+	sha2_test_fun(sha2_testVector2In, sha2_testVector2InLenght, sha2_testVector2Out256, sha2_testVector2Out256Lenght);
+	sha2_test_fun(sha2_testVector3In, sha2_testVector3InLenght, sha2_testVector3Out256, sha2_testVector3Out256Lenght);
+	sha2_test_fun(sha2_testVector4In, sha2_testVector4InLenght, sha2_testVector4Out256, sha2_testVector4Out256Lenght);
+	sha2_test_fun(sha2_testVector5In, sha2_testVector5InLenght, sha2_testVector5Out256, sha2_testVector5Out256Lenght);
+	sha2_test_fun(sha2_testVector6In, sha2_testVector6InLenght, sha2_testVector6Out256, sha2_testVector6Out256Lenght);
+
+	sha5_test_fun(sha2_testVector1In, sha2_testVector1InLenght, sha2_testVector1Out512, sha2_testVector1Out512Lenght);
+	sha5_test_fun(sha2_testVector2In, sha2_testVector2InLenght, sha2_testVector2Out512, sha2_testVector2Out512Lenght);
+	sha5_test_fun(sha2_testVector3In, sha2_testVector3InLenght, sha2_testVector3Out512, sha2_testVector3Out512Lenght);
+	sha5_test_fun(sha2_testVector4In, sha2_testVector4InLenght, sha2_testVector4Out512, sha2_testVector4Out512Lenght);
+	sha5_test_fun(sha2_testVector5In, sha2_testVector5InLenght, sha2_testVector5Out512, sha2_testVector5Out512Lenght);
+	sha5_test_fun(sha2_testVector6In, sha2_testVector6InLenght, sha2_testVector6Out512, sha2_testVector6Out512Lenght);
+	printf("<====================END SHA2 test===========================>\n\n");
+	fflush(stdout);
+
+// END SHA2 test ============================================================>
+
 //base64 tests ==============================================================>
-//	printf("<====================Start base64 Decode test vector 1>\n\n");
-//	fflush(stdout);
-//	base64_Decode_test(base64_testVector1, base64_testVector1Lenght, testVector1, testVector1Lenght);
-//
-//	printf("<=====================Start base64 Decode test vector 2>\n\n");
-//	fflush(stdout);
-//	base64_Decode_test(base64_testVector2, base64_testVector2Lenght, testVector2, testVector2Lenght);
-//
-//	printf("<=====================Start base64 Decode test vector 3>\n\n");
-//	fflush(stdout);
-//	base64_Decode_test(base64_testVector3, base64_testVector3Lenght, testVector3, testVector3Lenght);
-//
-//	printf("<====================Start base64 Encode test vector 1>\n\n");
-//	fflush(stdout);
-//	base64_Encode_test(testVector1, testVector1Lenght, base64_testVector1, base64_testVector1Lenght);
-//
-//	printf("<====================Start base64 Encode test vector 2>\n\n");
-//	fflush(stdout);
-//	base64_Encode_test(testVector2, testVector2Lenght, base64_testVector2, base64_testVector2Lenght);
-//
-//	printf("<====================Start base64 Encode test vector 1>\n\n");
-//	fflush(stdout);
-//	base64_Encode_test(testVector3, testVector3Lenght, base64_testVector3, base64_testVector3Lenght);
+	printf("<====================Start base64 Decode test vector 1>\n\n");
+	fflush(stdout);
+	base64_Decode_test(base64_testVector1, base64_testVector1Lenght, testVector1, testVector1Lenght);
+
+	printf("<=====================Start base64 Decode test vector 2>\n\n");
+	fflush(stdout);
+	base64_Decode_test(base64_testVector2, base64_testVector2Lenght, testVector2, testVector2Lenght);
+
+	printf("<=====================Start base64 Decode test vector 3>\n\n");
+	fflush(stdout);
+	base64_Decode_test(base64_testVector3, base64_testVector3Lenght, testVector3, testVector3Lenght);
+
+	printf("<====================Start base64 Encode test vector 1>\n\n");
+	fflush(stdout);
+	base64_Encode_test(testVector1, testVector1Lenght, base64_testVector1, base64_testVector1Lenght);
+
+	printf("<====================Start base64 Encode test vector 2>\n\n");
+	fflush(stdout);
+	base64_Encode_test(testVector2, testVector2Lenght, base64_testVector2, base64_testVector2Lenght);
+
+	printf("<====================Start base64 Encode test vector 1>\n\n");
+	fflush(stdout);
+	base64_Encode_test(testVector3, testVector3Lenght, base64_testVector3, base64_testVector3Lenght);
 // END base64 test ============================================================>
 
-// SHA512 test =================================================================>
-//	printf("SHA256 TEST -->\n");
-//	for(int i=0; i<256; i++){
-//		sha2_test_fun(buff, i);
-//	}
-//	printf("SHA512 TEST -->\n");
-//	for(int i=0; i<256; i++){
-//		sha5_test_fun(buff, i);
-//	}
-// END SHA512 test =============================================================>
 
 // X25519 test =================================================================>
 	printf("X25519 TEST -->\n");
